@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+echo -e "Linting (black):"
+echo
+./venv/bin/black --target-version=py38 smartpost setup.py
+echo "----------"
+
+echo -e "Sorting Imports (isort):"
+echo
+./venv/bin/isort --project=smartpost smartpost setup.py
+echo "----------"
+
+echo -e "Static Types Check After Linting (mypy):"
+echo
+./venv/bin/mypy smartpost
+echo "----------"
+
+echo -e "Running Code Style Check (flake8):"
+echo
+./venv/bin/flake8 smartpost
+echo "----------"

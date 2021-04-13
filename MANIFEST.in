@@ -1,0 +1,2 @@
+recursive-include smartpost *.py
+include README.md LICENSE smartpost/py.typed

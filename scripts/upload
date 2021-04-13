@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+# Go to repository root directory
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "${DIR}/.."
+
+find smartpost -type f -name "*.py[co]" -delete
+find smartpost -type d -name __pycache__ -delete
+
+rm -rf dist build smartpost.egg-info
+
+python3.8 setup.py sdist bdist_wheel
+python3.9 setup.py bdist_wheel
+twine upload dist/*
+
+rm -rf dist build smartpost.egg-info
