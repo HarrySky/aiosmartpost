@@ -9,8 +9,7 @@ This solution:
 * has 100% type-annotated code
 
 ## Quickstart
-
-Examples use async version of `Client`, but you can use this import instead:
+Examples use async version of `Client`, but you can use import below instead and remove `await` keywords:
 ```python
 from smartpost.sync import Client
 ```
@@ -19,6 +18,26 @@ Fetch list of available Estonian destinations:
 ```python
 >>> from smartpost import Client
 >>> client = Client("user", "pass")  # credentials can be omitted in this case
->>> await client.ee_destinations()
+>>> await client.get_ee_terminals()
 [Destination(place_id=101, name='Viljandi Männimäe Selver', ...), ...]
+```
+
+Add new shipment order and get A5 PDF with label for it:
+```python
+>>> from smartpost import Client
+>>> from smartpost.models import Recipient, EETerminalDestination, ShipmentOrder
+>>> client = Client("user", "pass")
+>>> recipient = Recipient("John Doe", "+37255555555", "john.doe@example.com")
+>>> terminal = EETerminalDestination(102)
+>>> order = ShipmentOrder(recipient, destination=terminal)
+>>> orders_info = await client.add_shipment_orders([order])
+>>> orders_info
+[OrderInfo(barcode='XXXXXXXXXXXXXXXX', reference=None, sender=None, doorcode=None)]
+
+
+>>> pdf_bytes = await client.get_labels_pdf("A5", [orders_info[0].barcode])
+>>> with open("/tmp/test.pdf", "wb") as file:
+...   file.write(pdf_bytes)
+... 
+57226
 ```
