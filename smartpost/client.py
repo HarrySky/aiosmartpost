@@ -6,6 +6,7 @@ from xml.etree.ElementTree import Element, SubElement, tostring  # nosec: B405
 from httpx import AsyncClient, Response
 from xmltodict import parse as parse_xml  # type: ignore[import]
 
+from smartpost.errors import ShipmentOrderError
 from smartpost.models import Destination, OrderInfo, ShipmentOrder
 
 
@@ -98,7 +99,10 @@ class Client:
 
         document.extend(order.to_xml() for order in shipment_orders)
         response = await self.post("shipment", tostring(document))
-        # TODO: Add request errors handling
+        if response.status_code == 400:
+            errors = parse_xml(response.read(), force_list=("item",))
+            raise ShipmentOrderError(errors)
+
         orders = parse_xml(response.read(), force_list=("item",))
         return [OrderInfo(**order) for order in orders["orders"]["item"]]
 

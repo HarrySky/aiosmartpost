@@ -125,7 +125,7 @@ class ShipmentOrder:
     size: Optional[Literal[5, 6, 7, 8, 11]] = None
     # Only needed when "sending with door code" service is used
     sender: Optional[Sender] = None
-    # TODO
+    # TODO: Create proper types
     lqitems: None = None
     additionalservices: None = None
 
@@ -137,7 +137,31 @@ class ShipmentOrder:
         item.append(destination_el)
 
         # Optional fields
-        # TODO
+        if self.barcode:
+            barcode = SubElement(item, "barcode")
+            barcode.text = self.barcode
+
+        if self.reference:
+            reference = SubElement(item, "reference")
+            reference.text = self.reference
+
+        if self.content:
+            content = SubElement(item, "content")
+            content.text = self.content
+
+        if self.orderparent:
+            orderparent = SubElement(item, "orderparent")
+            orderparent.text = self.orderparent
+
+        if self.weight:
+            weight = SubElement(item, "weight")
+            weight.text = str(self.weight)
+
+        if self.size:
+            size = SubElement(item, "size")
+            size.text = str(self.size)
+
+        # TODO: Deal with sender, lqitems and additionalservices
 
         return item
 

@@ -7,6 +7,7 @@
 This solution:
 * has both async and sync API
 * has 100% type-annotated code
+* is tested in real-world project in Estonia
 
 ## Quickstart
 Examples use async version of `Client`, but you can use import below instead and remove `await` keywords:
@@ -25,12 +26,20 @@ Fetch list of available Estonian destinations:
 Add new shipment order and get A5 PDF with label for it:
 ```python
 >>> from smartpost import Client
+>>> from smartpost.errors import ShipmentOrderError
 >>> from smartpost.models import Recipient, EETerminalDestination, ShipmentOrder
 >>> client = Client("user", "pass")
 >>> recipient = Recipient("John Doe", "+37255555555", "john.doe@example.com")
 >>> terminal = EETerminalDestination(102)
->>> order = ShipmentOrder(recipient, destination=terminal)
->>> orders_info = await client.add_shipment_orders([order])
+>>> order_id = 547
+>>> order = ShipmentOrder(recipient, terminal, reference=str(order_id))
+>>> try:
+>>>     orders_info = await client.add_shipment_orders([order])
+>>> except ShipmentOrderError as exc:
+>>>     print("Failed to add shipment order:")
+>>>     for error_details in exc.errors:
+>>>         print(f"Order #{error_details['reference']} error: {str(error_details)}")
+>>>
 >>> orders_info
 [OrderInfo(barcode='XXXXXXXXXXXXXXXX', reference=None, sender=None, doorcode=None)]
 

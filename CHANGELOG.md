@@ -22,6 +22,13 @@ Nothing here yet
 ### Removed
 -->
 
+## 0.3.0 (August 9th, 2021)
+
+### Changed
+
+- Raise `ShipmentOrderError` in `Client.add_shipment_orders` on error
+- Process optional fields in `ShipmentOrder.to_xml`
+
 ## 0.2.0 (April 13th, 2021)
 
 ### Changed
