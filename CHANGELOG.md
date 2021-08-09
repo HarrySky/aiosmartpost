@@ -22,6 +22,12 @@ Nothing here yet
 ### Removed
 -->
 
+## 0.3.1 (August 9th, 2021)
+
+### Fixed
+
+- Use key "orders" instead of "errors" in API errors processing
+
 ## 0.3.0 (August 9th, 2021)
 
 ### Changed

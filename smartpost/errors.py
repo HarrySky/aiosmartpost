@@ -48,5 +48,5 @@ class ShipmentOrderErrorDetails:
 class ShipmentOrderError(Exception):
     def __init__(self, errors: Dict[str, Any]) -> None:
         self.errors: List[ShipmentOrderErrorDetails] = [
-            ShipmentOrderErrorDetails(item) for item in errors["errors"]["item"]
+            ShipmentOrderErrorDetails(item) for item in errors["orders"]["item"]
         ]
