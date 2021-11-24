@@ -3,7 +3,7 @@ from typing import List, Literal, Optional
 # We don't use it with untrusted random input
 from xml.etree.ElementTree import Element, SubElement, tostring  # nosec: B405
 
-from httpx import AsyncClient, Response
+from httpx import AsyncClient, Response, Timeout
 from xmltodict import parse as parse_xml  # type: ignore[import]
 
 from smartpost.errors import ShipmentOrderError
@@ -11,13 +11,20 @@ from smartpost.models import Destination, OrderInfo, ShipmentOrder
 
 
 class Client:
-    """
-    TODO: DOCUMENTATION
-    """
+    """Asynchronous SmartPost API client that takes care of all low-level things."""
 
-    def __init__(self, username: str = "", password: str = "") -> None:  # nosec: B107
+    def __init__(
+        self,
+        username: str = "",
+        password: str = "",  # nosec: B107
+        *,
+        read_timeout: int = 10,
+    ) -> None:
+        self._read_timeout = read_timeout
         self._client: Optional[AsyncClient] = None
-        # Set up authentication XML element
+
+        # XML element "authentication" will be sent with requests that require auth
+
         self._auth = Element("authentication")
         user_el = SubElement(self._auth, "user")
         password_el = SubElement(self._auth, "password")
@@ -30,23 +37,24 @@ class Client:
             self._client = AsyncClient(
                 base_url="https://iseteenindus.smartpost.ee/api",
                 http2=True,
+                timeout=Timeout(5, read=self._read_timeout),
             )
 
         return self._client
 
     async def get(self, request: str, **kwargs: str) -> Response:
-        async with self.client as client:
-            return await client.get("/", params={"request": request, **kwargs})
+        return await self.client.get("/", params={"request": request, **kwargs})
 
     async def post(self, request: str, xml_content: bytes) -> Response:
-        async with self.client as client:
-            return await client.post(
-                "/", params={"request": request}, content=xml_content
-            )
+        return await self.client.post(
+            "/", params={"request": request}, content=xml_content
+        )
 
     async def get_ee_terminals(self) -> List[Destination]:
-        """
-        TODO: DOCUMENTATION
+        """Fetches list of all Estonia terminals.
+
+        Returns:
+            A list of `Destination` instances representing all Estonia terminals.
         """
         response = await self.get("destinations", country="EE", type="APT")
         # TODO: Add request errors handling
@@ -54,8 +62,11 @@ class Client:
         return [Destination(**item) for item in destinations["destinations"]["item"]]
 
     async def get_ee_express_terminals(self) -> List[Destination]:
-        """
-        TODO: DOCUMENTATION
+        """Fetches list of all Estonia express terminals.
+
+        Returns:
+            A list of `Destination` instances
+            representing all Estonia express terminals.
         """
         response = await self.get(
             "destinations", country="EE", type="APT", filter="express"
@@ -65,8 +76,10 @@ class Client:
         return [Destination(**item) for item in destinations["destinations"]["item"]]
 
     async def get_fi_terminals(self) -> List[Destination]:
-        """
-        TODO: DOCUMENTATION
+        """Fetches list of all Finland terminals.
+
+        Returns:
+            A list of `Destination` instances representing all Finland terminals.
         """
         response = await self.get("destinations", country="FI", type="APT")
         # TODO: Add request errors handling
@@ -74,8 +87,10 @@ class Client:
         return [Destination(**item) for item in destinations["destinations"]["item"]]
 
     async def get_fi_post_offices(self) -> List[Destination]:
-        """
-        TODO: DOCUMENTATION
+        """Fetches list of all Finland post offices.
+
+        Returns:
+            A list of `Destination` instances representing all Finland post offices.
         """
         response = await self.get("destinations", country="FI", type="PO")
         # TODO: Add request errors handling
@@ -87,8 +102,21 @@ class Client:
         shipment_orders: List[ShipmentOrder],
         report_emails: Optional[List[str]] = None,
     ) -> List[OrderInfo]:
-        """
-        TODO: DOCUMENTATION
+        """Adds shipment orders to SmartPost system.
+
+        Args:
+            shipment_orders:
+                a list of `ShipmentOrder` instances representing orders to be added.
+            report_emails:
+                optional list of strings with emails to which
+                reports about order will be sent.
+
+        Returns:
+            A list of `OrderInfo` instances representing all added orders.
+
+        Raises:
+            ShipmentOrderError:
+                SmartPost API had issues with shipment orders you sent.
         """
         document = Element("orders")
         document.insert(0, self._auth)
@@ -111,8 +139,22 @@ class Client:
         format: Literal["A5", "A6", "A6-4", "A7", "A7-8"],
         barcodes: List[str],
     ) -> bytes:
-        """
-        TODO: DOCUMENTATION
+        """Requests PDF file with labels for orders.
+
+        Args:
+            format:
+                a string with PDF page format, any of the following:
+                A5, A6, A6-4, A7, A7-8.
+            barcodes:
+                a list of strings with order barcodes for which labels are requested.
+
+        Returns:
+            A PDF file bytes. File will contain a page for each barcode provided in
+            `barcodes` argument, all pages will be in format from `format` argument.
+
+        Raises:
+            httpx.ReadTimeout:
+                SmartPost API did not manage to send PDF file in time.
         """
         document = Element("labels")
         document.insert(0, self._auth)

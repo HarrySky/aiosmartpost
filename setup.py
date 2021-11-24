@@ -29,7 +29,7 @@ setup(
     license="Unlicense",
     author="Igor Nehoroshev",
     author_email="mail@neigor.me",
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests"]),
     # Use MANIFEST.in for data files
     include_package_data=True,
     zip_safe=False,
@@ -42,7 +42,7 @@ setup(
         "xmltodict",
     ],
     classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "Operating System :: POSIX :: Linux",
         "License :: OSI Approved :: The Unlicense (Unlicense)",

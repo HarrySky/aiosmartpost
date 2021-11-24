@@ -20,7 +20,7 @@ class Destination:
     lng: float
 
     def __post_init__(self) -> None:
-        # Values passed to __init__ are expected to be str
+        # Values passed to __init__ are expected to be str (XML)
         self.place_id = int(self.place_id)
         self.lat = float(self.lat)
         self.lng = float(self.lng)
@@ -31,9 +31,9 @@ class Sender:
     name: str
     phone: str
     email: str
-    # Amount of money the sender has to pay before sending the parcel
+    #: Amount of money the sender has to pay before sending the parcel
     cash: float
-    # Business customer’s account identificator
+    #: Business customer’s account identificator
     account: int
 
 
@@ -42,9 +42,9 @@ class Recipient:
     name: str
     phone: str
     email: str
-    # Amount of money the recipient has to pay before receiving the parcel
+    #: Amount of money the recipient has to pay before receiving the parcel
     cash: Optional[float] = None
-    # ID code of the recipient; needed if ID validation is required.
+    #: ID code of the recipient; needed if ID validation is required.
     idcode: Optional[int] = None
 
     def to_xml(self) -> Element:
@@ -56,7 +56,8 @@ class Recipient:
         email = SubElement(recipient, "email")
         email.text = self.email
 
-        # Optional fields
+        # Optional fields handling
+
         if self.cash is not None:
             cash = SubElement(recipient, "cash")
             cash.text = str(self.cash)
@@ -91,8 +92,8 @@ class EECourierDestination:
     timewindow: Literal[1, 2, 3]
 
     def to_xml(self) -> Element:
-        """TODO"""
-        return Element("destination")
+        # TODO: IMPLEMENT
+        raise NotImplementedError()
 
 
 @dataclass
@@ -116,14 +117,14 @@ ShipmentDestination = Union[EETerminalDestination, EECourierDestination, FIDesti
 class ShipmentOrder:
     recipient: Recipient
     destination: ShipmentDestination
-    # Will be generated if not specified
+    #: Barcode will be generated if not specified
     barcode: Optional[str] = None
     reference: Optional[str] = None
     content: Optional[str] = None
     orderparent: Optional[str] = None
     weight: Optional[float] = None
     size: Optional[Literal[5, 6, 7, 8, 11]] = None
-    # Only needed when "sending with door code" service is used
+    #: Only needed when "sending with door code" service is used
     sender: Optional[Sender] = None
     # TODO: Create proper types
     lqitems: None = None
@@ -136,7 +137,8 @@ class ShipmentOrder:
         destination_el = self.destination.to_xml()
         item.append(destination_el)
 
-        # Optional fields
+        # Optional fields handling
+
         if self.barcode:
             barcode = SubElement(item, "barcode")
             barcode.text = self.barcode
@@ -176,11 +178,11 @@ class OrderInfo:
     reference: str
     sender: Optional[SenderDoorCode] = None
 
-    # Convinient access to `sender["doorcode"]`
+    #: Convinient access to `sender["doorcode"]`
     doorcode: Optional[int] = field(default=None, init=False)
 
     def __post_init__(self) -> None:
         if self.sender:
-            # Values passed to __init__ are expected to be str
+            # Values passed to __init__ are expected to be str (XML)
             self.doorcode = int(self.sender["doorcode"])
             self.sender["doorcode"] = self.doorcode

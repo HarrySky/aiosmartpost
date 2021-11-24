@@ -24,6 +24,8 @@ errors_explanation: Dict[str, str] = {
 
 
 class ShipmentOrderErrorDetails:
+    """Additional details about shipment order with issues."""
+
     def __init__(self, item: Dict[str, Any]) -> None:
         error: Dict[str, Any] = item["error"]
         self.barcode: Optional[str] = item["barcode"]
@@ -46,6 +48,8 @@ class ShipmentOrderErrorDetails:
 
 
 class ShipmentOrderError(Exception):
+    """Error that is raised when there are issues with shipment orders."""
+
     def __init__(self, errors: Dict[str, Any]) -> None:
         self.errors: List[ShipmentOrderErrorDetails] = [
             ShipmentOrderErrorDetails(item) for item in errors["orders"]["item"]

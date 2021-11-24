@@ -22,6 +22,17 @@ Nothing here yet
 ### Removed
 -->
 
+## 0.3.2 (November 24th, 2021)
+
+### Added
+
+- Add synchronous `aiosmartpost.sync.Client`
+- Add `read_timeout` parameter to client so that some `httpx.ReadTimeout` errors can be avoided
+
+### Fixed
+
+- Fix HTTPX client usage to prevent concurrent access issues
+
 ## 0.3.1 (August 9th, 2021)
 
 ### Fixed
