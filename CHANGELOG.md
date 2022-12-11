@@ -22,6 +22,12 @@ Nothing here yet
 ### Removed
 -->
 
+## 0.3.3 (December 11th, 2022)
+
+### Added
+
+- Add basic error handling in `Client.get_labels_pdf`
+
 ## 0.3.2 (November 24th, 2021)
 
 ### Added

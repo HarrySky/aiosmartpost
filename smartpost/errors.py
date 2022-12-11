@@ -54,3 +54,11 @@ class ShipmentOrderError(Exception):
         self.errors: List[ShipmentOrderErrorDetails] = [
             ShipmentOrderErrorDetails(item) for item in errors["orders"]["item"]
         ]
+
+
+class ShipmentLabelsError(Exception):  # noqa: B903
+    """Error that is raised when there are issues with shipment labels (PDF)."""
+
+    def __init__(self, body: bytes, status_code: int) -> None:
+        self.body = body
+        self.status_code = status_code

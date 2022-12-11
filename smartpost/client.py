@@ -6,7 +6,7 @@ from xml.etree.ElementTree import Element, SubElement, tostring  # nosec: B405
 from httpx import AsyncClient, Response, Timeout
 from xmltodict import parse as parse_xml  # type: ignore[import]
 
-from smartpost.errors import ShipmentOrderError
+from smartpost.errors import ShipmentLabelsError, ShipmentOrderError
 from smartpost.models import Destination, OrderInfo, ShipmentOrder
 
 
@@ -165,5 +165,7 @@ class Client:
             barcode_el.text = barcode
 
         response = await self.post("labels", tostring(document))
-        # TODO: Add request errors handling
+        if response.status_code != 200:
+            raise ShipmentLabelsError(response.read(), response.status_code)
+
         return response.read()
