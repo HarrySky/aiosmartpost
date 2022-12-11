@@ -10,8 +10,8 @@ find smartpost -type d -name __pycache__ -delete
 
 rm -rf dist build *.egg-info
 
-python3.8 setup.py sdist bdist_wheel
-python3.9 setup.py bdist_wheel
+python3.10 setup.py sdist bdist_wheel
+python -m build --wheel
 twine upload dist/*
 
 rm -rf dist build *.egg-info
