@@ -13,4 +13,4 @@ python3.11 -m virtualenv venv
 # Linting (with changing files)
 ./venv/bin/pip install --no-cache-dir black isort
 # Security checks and other metrics
-./venv/bin/pip install --no-cache-dir bandit radon safety
+./venv/bin/pip install --no-cache-dir bandit radon

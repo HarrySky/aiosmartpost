@@ -1,6 +1,8 @@
-from typing import Any, Dict, List, Optional
+from __future__ import annotations
 
-errors_explanation: Dict[str, str] = {
+from typing import Any
+
+errors_explanation: dict[str, str] = {
     "000": "Destination info missing",
     "001": "Required input missing",
     "002": "Barcode already exists",
@@ -26,22 +28,25 @@ errors_explanation: Dict[str, str] = {
 class ShipmentOrderErrorDetails:
     """Additional details about shipment order with issues."""
 
-    def __init__(self, item: Dict[str, Any]) -> None:
-        error: Dict[str, Any] = item["error"]
-        self.barcode: Optional[str] = item["barcode"]
-        self.reference: Optional[str] = item["reference"]
-        self.code: str = error["code"]
-        self.message: str = errors_explanation[error["code"]]
-        self.text: str = error["text"]
-        self.input: Optional[str] = error["input"]
-        # Field "field" is not mentioned in docs (optional)
-        self.field: Optional[str] = error.get("field")
+    def __init__(self, item: dict[str, Any]) -> None:
+        self.barcode: str | None = item.get("barcode")
+        self.reference: str | None = item.get("reference")
+        self.code: str = item.get("code", "")
+        self.text: str = item.get("text", "")
+        self.input: str | None = item.get("input")
+        if self.barcode is not None:
+            error = item["error"]
+            self.code = error["code"]
+            self.text = error["text"]
+            self.input = error.get("input")
+
+        self.message: str = errors_explanation[self.code]
 
     def __str__(self) -> str:
         return (
             f"ShipmentOrderErrorDetails(barcode={self.barcode}, "
             f"reference={self.reference}, code={self.code}, message={self.message}, "
-            f"text={self.text}, input={self.input}, field={self.field})"
+            f"text={self.text}, input={self.input})"
         )
 
     __repr__ = __str__
@@ -50,9 +55,9 @@ class ShipmentOrderErrorDetails:
 class ShipmentOrderError(Exception):
     """Error that is raised when there are issues with shipment orders."""
 
-    def __init__(self, errors: Dict[str, Any]) -> None:
-        self.errors: List[ShipmentOrderErrorDetails] = [
-            ShipmentOrderErrorDetails(item) for item in errors["orders"]["item"]
+    def __init__(self, errors: dict[str, Any]) -> None:
+        self.errors: list[ShipmentOrderErrorDetails] = [
+            ShipmentOrderErrorDetails(item) for item in errors["item"]
         ]
 
 

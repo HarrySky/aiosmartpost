@@ -20,7 +20,7 @@ def get_long_description():
 
 setup(
     name="aiosmartpost",
-    python_requires=">=3.8",
+    python_requires=">=3.11",
     version=get_version("smartpost"),
     description="Itella SmartPost API wrapper for humans 📦",
     long_description=get_long_description(),
@@ -37,19 +37,15 @@ setup(
         # For HTTP requests to API using HTTP/2
         "httpx",
         "h2",
-        # For parsing API responses to dict
-        # (SmartPost API uses XML instead of JSON for some reason)
-        "xmltodict",
     ],
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Operating System :: POSIX :: Linux",
         "License :: OSI Approved :: The Unlicense (Unlicense)",
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.11",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Typing :: Typed",
     ],

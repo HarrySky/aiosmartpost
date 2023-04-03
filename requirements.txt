@@ -1,4 +1,3 @@
 # Pinned versions that should 100% compatible
-httpx==0.18.2
-xmltodict==0.12.0
-h2==4.0.0
+httpx==0.23.3
+h2==4.1.0

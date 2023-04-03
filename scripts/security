@@ -8,7 +8,7 @@ echo "----------"
 
 echo -e "Dependencies Security Checks (safety):"
 echo
-./venv/bin/safety check --full-report
+./scripts/safety-2.3.2 check --full-report
 echo "----------"
 
 echo -e "Checking outdated dependencies (pip):"

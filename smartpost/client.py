@@ -1,13 +1,19 @@
-from typing import List, Literal, Optional
+from __future__ import annotations
 
-# We don't use it with untrusted random input
-from xml.etree.ElementTree import Element, SubElement, tostring  # nosec: B405
+from dataclasses import asdict
+from typing import Any, Literal
 
 from httpx import AsyncClient, Response, Timeout
-from xmltodict import parse as parse_xml  # type: ignore[import]
 
 from smartpost.errors import ShipmentLabelsError, ShipmentOrderError
-from smartpost.models import Destination, OrderInfo, ShipmentOrder
+from smartpost.models import (
+    Order,
+    OrdersRequest,
+    Place,
+    ShipmentOrder,
+    SmartPostOrder,
+    SmartPostPlace,
+)
 
 
 class Client:
@@ -15,93 +21,90 @@ class Client:
 
     def __init__(
         self,
-        username: str = "",
-        password: str = "",  # nosec: B107
+        api_key: str,
         *,
         read_timeout: int = 10,
     ) -> None:
         self._read_timeout = read_timeout
-        self._client: Optional[AsyncClient] = None
-
-        # XML element "authentication" will be sent with requests that require auth
-
-        self._auth = Element("authentication")
-        user_el = SubElement(self._auth, "user")
-        password_el = SubElement(self._auth, "password")
-        user_el.text = username
-        password_el.text = password
+        self._client: AsyncClient | None = None
+        self._api_key = api_key
 
     @property
     def client(self) -> AsyncClient:
         if not self._client:
             self._client = AsyncClient(
-                base_url="https://iseteenindus.smartpost.ee/api",
+                base_url="https://gateway.posti.fi/smartpost",
                 http2=True,
                 timeout=Timeout(5, read=self._read_timeout),
+                headers={
+                    "Authorization": self._api_key,
+                    "Content-Type": "application/json",
+                },
             )
 
         return self._client
 
-    async def get(self, request: str, **kwargs: str) -> Response:
-        return await self.client.get("/", params={"request": request, **kwargs})
+    async def get(self, endpoint: str, **kwargs: str | list[str]) -> Response:
+        return await self.client.get(endpoint, params=kwargs)
 
-    async def post(self, request: str, xml_content: bytes) -> Response:
-        return await self.client.post(
-            "/", params={"request": request}, content=xml_content
-        )
+    async def post(self, endpoint: str, json_data: dict[str, Any]) -> Response:
+        return await self.client.post(endpoint, json=json_data)
 
-    async def get_ee_terminals(self) -> List[Destination]:
+    async def get_ee_terminals(self) -> list[Place]:
         """Fetches list of all Estonia terminals.
 
         Returns:
-            A list of `Destination` instances representing all Estonia terminals.
+            A list of `Place` instances representing all Estonia terminals.
         """
-        response = await self.get("destinations", country="EE", type="APT")
+        response = await self.get("/api/ext/v1/places", country="EE", type="APT")
         # TODO: Add request errors handling
-        destinations = parse_xml(response.read(), force_list=("item",))
-        return [Destination(**item) for item in destinations["destinations"]["item"]]
+        data = response.json()
+        places: list[SmartPostPlace] = data["places"]["item"]
+        return [Place(**place) for place in places]
 
-    async def get_ee_express_terminals(self) -> List[Destination]:
+    async def get_ee_express_terminals(self) -> list[Place]:
         """Fetches list of all Estonia express terminals.
 
         Returns:
-            A list of `Destination` instances
-            representing all Estonia express terminals.
+            A list of `Place` instances representing all Estonia express terminals.
         """
         response = await self.get(
-            "destinations", country="EE", type="APT", filter="express"
+            "/api/ext/v1/places", country="EE", type="APT", filter="express"
         )
         # TODO: Add request errors handling
-        destinations = parse_xml(response.read(), force_list=("item",))
-        return [Destination(**item) for item in destinations["destinations"]["item"]]
+        data = response.json()
+        places: list[SmartPostPlace] = data["places"]["item"]
+        return [Place(**place) for place in places]
 
-    async def get_fi_terminals(self) -> List[Destination]:
+    async def get_fi_terminals(self) -> list[Place]:
         """Fetches list of all Finland terminals.
 
         Returns:
-            A list of `Destination` instances representing all Finland terminals.
+            A list of `Place` instances representing all Finland terminals.
         """
-        response = await self.get("destinations", country="FI", type="APT")
+        response = await self.get("/api/ext/v1/places", country="FI", type="APT")
         # TODO: Add request errors handling
-        destinations = parse_xml(response.read(), force_list=("item",))
-        return [Destination(**item) for item in destinations["destinations"]["item"]]
+        data = response.json()
+        places: list[SmartPostPlace] = data["places"]["item"]
+        return [Place(**place) for place in places]
 
-    async def get_fi_post_offices(self) -> List[Destination]:
+    async def get_fi_post_offices(self) -> list[Place]:
         """Fetches list of all Finland post offices.
 
         Returns:
-            A list of `Destination` instances representing all Finland post offices.
+            A list of `Place` instances representing all Finland post offices.
         """
-        response = await self.get("destinations", country="FI", type="PO")
+        response = await self.get("/api/ext/v1/places", country="FI", type="PO")
         # TODO: Add request errors handling
-        destinations = parse_xml(response.read(), force_list=("item",))
-        return [Destination(**item) for item in destinations["destinations"]["item"]]
+        data = response.json()
+        places: list[SmartPostPlace] = data["places"]["item"]
+        return [Place(**place) for place in places]
 
     async def add_shipment_orders(
         self,
-        shipment_orders: List[ShipmentOrder],
-        report_emails: Optional[List[str]] = None,
-    ) -> List[OrderInfo]:
+        shipment_orders: list[ShipmentOrder],
+        report_emails: list[str] | None = None,
+    ) -> list[Order]:
         """Adds shipment orders to SmartPost system.
 
         Args:
@@ -112,32 +115,42 @@ class Client:
                 reports about order will be sent.
 
         Returns:
-            A list of `OrderInfo` instances representing all added orders.
+            A list of `Order` instances representing all added orders.
 
         Raises:
             ShipmentOrderError:
                 SmartPost API had issues with shipment orders you sent.
         """
-        document = Element("orders")
-        document.insert(0, self._auth)
-        report_el = SubElement(document, "report")
+        request_data: OrdersRequest = {
+            "orders": {
+                "report": [],
+                "item": [],
+            }
+        }
         for email in report_emails or []:
-            email_el = SubElement(report_el, "email")
-            email_el.text = email
+            request_data["orders"]["report"].append(email)
 
-        document.extend(order.to_xml() for order in shipment_orders)
-        response = await self.post("shipment", tostring(document))
+        for order in shipment_orders:
+            order_dict = {
+                key: value for key, value in asdict(order).items() if value is not None
+            }
+            request_data["orders"]["item"].append(order_dict)
+
+        response = await self.post("/api/ext/v1/orders", dict(request_data))
         if response.status_code == 400:
-            errors = parse_xml(response.read(), force_list=("item",))
-            raise ShipmentOrderError(errors)
+            errors = response.json()
+            print(errors)
+            raise ShipmentOrderError(errors["error"])
 
-        orders = parse_xml(response.read(), force_list=("item",))
-        return [OrderInfo(**order) for order in orders["orders"]["item"]]
+        data = response.json()
+        print(data)
+        orders: list[SmartPostOrder] = data["orders"]["item"]
+        return [Order(**order) for order in orders]
 
     async def get_labels_pdf(
         self,
         format: Literal["A5", "A6", "A6-4", "A7", "A7-8"],
-        barcodes: List[str],
+        barcodes: list[str],
     ) -> bytes:
         """Requests PDF file with labels for orders.
 
@@ -156,15 +169,9 @@ class Client:
             httpx.ReadTimeout:
                 SmartPost API did not manage to send PDF file in time.
         """
-        document = Element("labels")
-        document.insert(0, self._auth)
-        format_el = SubElement(document, "format")
-        format_el.text = format
-        for barcode in barcodes:
-            barcode_el = SubElement(document, "barcode")
-            barcode_el.text = barcode
-
-        response = await self.post("labels", tostring(document))
+        response = await self.get("/api/ext/v1/labels", format=format, barcode=barcodes)
+        data = response.read()
+        print(data)
         if response.status_code != 200:
             raise ShipmentLabelsError(response.read(), response.status_code)
 

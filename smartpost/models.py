@@ -1,188 +1,176 @@
-from dataclasses import dataclass, field
-from typing import Literal, Optional, TypedDict, Union
+from __future__ import annotations
 
-# We don't use it with untrusted random input
-from xml.etree.ElementTree import Element, SubElement  # nosec: B405
+from dataclasses import dataclass
+from typing import Any, Literal, NotRequired, TypedDict
 
 
-@dataclass
-class Destination:
-    place_id: int
+class SmartPostPlace(TypedDict):
+    """Place as returned from new SmartPost API."""
+
+    place_id: str
     name: str
     city: str
     address: str
-    country: Literal["EE", "FI"]
+    country: Literal["EE", "FI", "LV", "LT"]
     postalcode: str
     routingcode: str
     availability: str
     description: str
+    type: Literal["apt", "ipb", "po", "pudo"]
     lat: float
     lng: float
+    group_id: str
+    group_name: str
+    group_sort: int
+    created_date: str
+    updated_date: str
 
-    def __post_init__(self) -> None:
-        # Values passed to __init__ are expected to be str (XML)
-        self.place_id = int(self.place_id)
-        self.lat = float(self.lat)
-        self.lng = float(self.lng)
+
+@dataclass(slots=True, frozen=True)
+class Place:
+    """Place from new SmartPost API as optimized dataclass."""
+
+    place_id: str
+    name: str
+    city: str
+    address: str
+    country: Literal["EE", "FI", "LV", "LT"]
+    postalcode: str
+    routingcode: str
+    availability: str
+    description: str
+    type: Literal["apt", "ipb", "po", "pudo"]
+    lat: float
+    lng: float
+    group_id: str
+    group_name: str
+    group_sort: int
+    created_date: str
+    updated_date: str
 
 
-@dataclass
-class Sender:
+class OrdersRequestOrders(TypedDict):
+    report: list[str]
+    # See ShipmentOrder model
+    item: list[dict[str, Any]]
+
+
+class OrdersRequest(TypedDict):
+    orders: OrdersRequestOrders
+
+
+class ShipmentSource(TypedDict):
+    country: Literal["ee", "lv", "lt"]
+
+
+class Sender(TypedDict):
     name: str
     phone: str
-    email: str
+    email: NotRequired[str]
     #: Amount of money the sender has to pay before sending the parcel
-    cash: float
-    #: Business customer’s account identificator
-    account: int
+    cash: NotRequired[float]
 
 
-@dataclass
-class Recipient:
+class Recipient(TypedDict):
     name: str
     phone: str
-    email: str
-    #: Amount of money the recipient has to pay before receiving the parcel
-    cash: Optional[float] = None
+    email: NotRequired[str]
+    #: Amount of money for goods (goods / transport - only one can be filled)
+    goods: NotRequired[float]
+    #: Amount of money for transport (goods / transport - only one can be filled)
+    transport: NotRequired[float]
     #: ID code of the recipient; needed if ID validation is required.
-    idcode: Optional[int] = None
-
-    def to_xml(self) -> Element:
-        recipient = Element("recipient")
-        name = SubElement(recipient, "name")
-        name.text = self.name
-        phone = SubElement(recipient, "phone")
-        phone.text = self.phone
-        email = SubElement(recipient, "email")
-        email.text = self.email
-
-        # Optional fields handling
-
-        if self.cash is not None:
-            cash = SubElement(recipient, "cash")
-            cash.text = str(self.cash)
-
-        if self.idcode is not None:
-            idcode = SubElement(recipient, "idcode")
-            idcode.text = str(self.idcode)
-
-        return recipient
+    idcode: NotRequired[str]
 
 
-@dataclass
-class EETerminalDestination:
-    place_id: int
-
-    def to_xml(self) -> Element:
-        destination = Element("destination")
-        place_id = SubElement(destination, "place_id")
-        place_id.text = str(self.place_id)
-        return destination
+class EETerminalDestination(TypedDict):
+    place_id: str
+    country: Literal["ee"]
 
 
-@dataclass
-class EECourierDestination:
+class AddressDestination(TypedDict):
+    place_id: Literal["1"]
+    postalcode: str
+    #: Either just street or street + house + apartment
     street: str
-    house: str
-    apartment: str
+    #: Not required if all info is provided in street
+    house: NotRequired[str]
+    #: Not required if all info is provided in street
+    apartment: NotRequired[str]
     city: str
     country: str
-    postalcode: str
-    details: str
+    #: Extra details about the destination (e.g. third floor)
+    details: NotRequired[str]
+    #: When will the recipient be available for a courier to pick up:
+    #: 1 = Any time (default)
+    #: 2 = 09:00 – 17:00
+    #: 3 = 17:00 – 21:00
     timewindow: Literal[1, 2, 3]
 
-    def to_xml(self) -> Element:
-        # TODO: IMPLEMENT
-        raise NotImplementedError()
 
-
-@dataclass
-class FIDestination:
+class FIDestination(TypedDict):
+    country: Literal["fi"]
     postalcode: str
     routingcode: str
 
-    def to_xml(self) -> Element:
-        destination = Element("destination")
-        postalcode = SubElement(destination, "postalcode")
-        postalcode.text = self.postalcode
-        routingcode = SubElement(destination, "routingcode")
-        routingcode.text = self.routingcode
-        return destination
+
+ShipmentDestination = EETerminalDestination | AddressDestination | FIDestination
 
 
-ShipmentDestination = Union[EETerminalDestination, EECourierDestination, FIDestination]
+class AdditionalServices(TypedDict):
+    # TODO: DOCUMENT
+    labelprinted: NotRequired[bool]
 
 
-@dataclass
+@dataclass(slots=True)
 class ShipmentOrder:
+    """Shipment order data required to add to order via SmartPost API"""
+
+    #: From where parcel will be sent
+    source: ShipmentSource
     recipient: Recipient
     destination: ShipmentDestination
     #: Barcode will be generated if not specified
-    barcode: Optional[str] = None
-    reference: Optional[str] = None
-    content: Optional[str] = None
-    orderparent: Optional[str] = None
-    weight: Optional[float] = None
-    size: Optional[Literal[5, 6, 7, 8, 11]] = None
+    barcode: str | None = None
+    #: Customer’s reference number (showing on the label)
+    reference: str | None = None
+    #: Shipment content (showing on the label)
+    content: str | None = None
+    #: To create multiple parcels with the same data (1-20)
+    multiply: int = 1
+    #: Weight of the shipment in kg
+    weight: float | None = None
+    #: Parcel size, required if sent via APT using sender pin code
+    size: Literal["XS", "S", "M", "L", "XL"] | None = None
     #: Only needed when "sending with door code" service is used
-    sender: Optional[Sender] = None
-    # TODO: Create proper types
-    lqitems: None = None
-    additionalservices: None = None
+    sender: Sender | None = None
+    #: How many days the customer is able to return order. If customer return is not
+    #: allowed, insert 0 (0-90)
+    customer_return_days: int | None = None
+    #: TODO: Document
+    additionalservices: AdditionalServices | None = None
 
-    def to_xml(self) -> Element:
-        item = Element("item")
-        recipient_el = self.recipient.to_xml()
-        item.append(recipient_el)
-        destination_el = self.destination.to_xml()
-        item.append(destination_el)
-
-        # Optional fields handling
-
-        if self.barcode:
-            barcode = SubElement(item, "barcode")
-            barcode.text = self.barcode
-
-        if self.reference:
-            reference = SubElement(item, "reference")
-            reference.text = self.reference
-
-        if self.content:
-            content = SubElement(item, "content")
-            content.text = self.content
-
-        if self.orderparent:
-            orderparent = SubElement(item, "orderparent")
-            orderparent.text = self.orderparent
-
-        if self.weight:
-            weight = SubElement(item, "weight")
-            weight.text = str(self.weight)
-
-        if self.size:
-            size = SubElement(item, "size")
-            size.text = str(self.size)
-
-        # TODO: Deal with sender, lqitems and additionalservices
-
-        return item
+    # TODO: Add return section
 
 
 class SenderDoorCode(TypedDict):
-    doorcode: int
+    doorcode: str
 
 
-@dataclass
-class OrderInfo:
+class SmartPostOrder(TypedDict):
+    """Just added order as returned from new SmartPost API."""
+
+    barcode: str
+    #: Customer’s reference number (showing on the label)
+    reference: str
+    #: Returned only if sending with door code service is activated
+    sender: NotRequired[SenderDoorCode]
+
+
+@dataclass(slots=True, frozen=True)
+class Order:
+    """Just added order info from new SmartPost API as optimized dataclass."""
+
     barcode: str
     reference: str
-    sender: Optional[SenderDoorCode] = None
-
-    #: Convinient access to `sender["doorcode"]`
-    doorcode: Optional[int] = field(default=None, init=False)
-
-    def __post_init__(self) -> None:
-        if self.sender:
-            # Values passed to __init__ are expected to be str (XML)
-            self.doorcode = int(self.sender["doorcode"])
-            self.sender["doorcode"] = self.doorcode
+    sender: SenderDoorCode | None = None
