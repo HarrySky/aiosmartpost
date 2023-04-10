@@ -139,11 +139,9 @@ class Client:
         response = await self.post("/api/ext/v1/orders", dict(request_data))
         if response.status_code == 400:
             errors = response.json()
-            print(errors)
             raise ShipmentOrderError(errors["error"])
 
         data = response.json()
-        print(data)
         orders: list[SmartPostOrder] = data["orders"]["item"]
         return [Order(**order) for order in orders]
 
@@ -171,8 +169,7 @@ class Client:
         """
         response = await self.get("/api/ext/v1/labels", format=format, barcode=barcodes)
         data = response.read()
-        print(data)
         if response.status_code != 200:
-            raise ShipmentLabelsError(response.read(), response.status_code)
+            raise ShipmentLabelsError(data, response.status_code)
 
-        return response.read()
+        return data
